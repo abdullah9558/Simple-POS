@@ -3,8 +3,20 @@ name: Build Mac installer
 on:
   workflow_dispatch:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - master
+    paths:
+      - 'electron-builder.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'electron/**'
+      - 'src/**'
+      - 'build/**'
+      - 'scripts/**'
+      - '.github/workflows/build-mac.yml'
+      - 'prisma/**'
+  tags:
+    - 'v*'
 
 jobs:
   mac:
