@@ -32,7 +32,6 @@ dist-electron/
 *.exe
 *.asar
 # Local secrets / DB
-.env
-.env.*
 !.env.example
 *.db
+config.bat
