@@ -1,0 +1,397 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─── Multi-tenant ────────────────────────────────────────────────
+
+model Business {
+  id         String     @id @default(cuid())
+  name       String
+  code       String     @unique
+  isActive   Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  stores     Store[]
+  users      User[]
+  categories Category[]
+  products   Product[]
+  customers  Customer[]
+  suppliers  Supplier[]
+  auditLogs  AuditLog[]
+}
+
+model Store {
+  id                 String              @id @default(cuid())
+  businessId         String
+  business           Business            @relation(fields: [businessId], references: [id])
+  name               String
+  code               String
+  address            String?
+  phone              String?
+  email              String?
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  members            UserStore[]
+  inventory          StoreInventory[]
+  sales              Sale[]
+  inventoryMovements InventoryMovement[]
+  purchaseOrders     PurchaseOrder[]
+  settings           Setting[]
+  transfersOut       StockTransfer[]     @relation("TransferFrom")
+  transfersIn        StockTransfer[]     @relation("TransferTo")
+  auditLogs          AuditLog[]
+
+  @@unique([businessId, code])
+  @@index([businessId])
+}
+
+model UserStore {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  role      UserRole @default(CASHIER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, storeId])
+  @@index([storeId])
+  @@index([userId])
+}
+
+model StoreInventory {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(0)
+  minStock  Int      @default(5)
+  version   Int      @default(1)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@unique([storeId, productId])
+  @@index([storeId])
+  @@index([productId])
+}
+
+model StockTransfer {
+  id          String           @id @default(cuid())
+  transferNo  String           @unique
+  fromStoreId String
+  fromStore   Store            @relation("TransferFrom", fields: [fromStoreId], references: [id])
+  toStoreId   String
+  toStore     Store            @relation("TransferTo", fields: [toStoreId], references: [id])
+  status      TransferStatus   @default(PENDING)
+  note        String?
+  createdById String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  completedAt DateTime?
+  items       TransferItem[]
+
+  @@index([fromStoreId])
+  @@index([toStoreId])
+}
+
+model TransferItem {
+  id         String        @id @default(cuid())
+  transferId String
+  transfer   StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product       @relation(fields: [productId], references: [id])
+  quantity   Int
+}
+
+enum TransferStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model SyncQueue {
+  id               String     @id @default(cuid())
+  entityType       String
+  entityId         String
+  operation        String
+  payload          String
+  clientMutationId String     @unique
+  status           SyncStatus @default(PENDING)
+  attempts         Int        @default(0)
+  lastError        String?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  syncedAt         DateTime?
+
+  @@index([status, createdAt])
+  @@index([entityType, entityId])
+}
+
+enum SyncStatus {
+  PENDING
+  IN_PROGRESS
+  SYNCED
+  FAILED
+  CONFLICT
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  businessId String?
+  business   Business? @relation(fields: [businessId], references: [id])
+  storeId    String?
+  store      Store?   @relation(fields: [storeId], references: [id])
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   String?
+  createdAt  DateTime @default(now())
+
+  @@index([businessId, createdAt])
+  @@index([storeId, createdAt])
+  @@index([entityType, entityId])
+}
+
+// ─── Authentication ──────────────────────────────────────────────
+
+model User {
+  id         String      @id @default(cuid())
+  businessId String?
+  business   Business?   @relation(fields: [businessId], references: [id])
+  name       String
+  email      String      @unique
+  password   String
+  role       UserRole    @default(CASHIER)
+  isActive   Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  sales      Sale[]
+  stores     UserStore[]
+
+  @@index([businessId])
+}
+
+enum UserRole {
+  OWNER
+  ADMIN
+  MANAGER
+  CASHIER
+}
+
+// ─── Catalog ─────────────────────────────────────────────────────
+
+model Category {
+  id          String    @id @default(cuid())
+  businessId  String?
+  business    Business? @relation(fields: [businessId], references: [id])
+  name        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+
+  @@index([businessId])
+}
+
+model Product {
+  id                 String              @id @default(cuid())
+  businessId         String?
+  business           Business?           @relation(fields: [businessId], references: [id])
+  name               String
+  sku                String              @unique
+  barcode            String?             @unique
+  price              Float
+  cost               Float               @default(0)
+  /// Mirror of active-store quantity for backward-compatible UI/queries.
+  stock              Int                 @default(0)
+  minStock           Int                 @default(5)
+  categoryId         String?
+  category           Category?           @relation(fields: [categoryId], references: [id])
+  supplierId         String?
+  supplier           Supplier?           @relation(fields: [supplierId], references: [id])
+  isActive           Boolean             @default(true)
+  version            Int                 @default(1)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  saleItems          SaleItem[]
+  inventoryMovements InventoryMovement[]
+  purchaseOrderItems PurchaseOrderItem[]
+  storeInventory     StoreInventory[]
+  transferItems      TransferItem[]
+
+  @@index([businessId])
+}
+
+// ─── Supply Chain ────────────────────────────────────────────────
+
+model Supplier {
+  id             String          @id @default(cuid())
+  businessId     String?
+  business       Business?       @relation(fields: [businessId], references: [id])
+  name           String
+  email          String?
+  phone          String?
+  address        String?
+  company        String?
+  isActive       Boolean         @default(true)
+  version        Int             @default(1)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  products       Product[]
+  purchaseOrders PurchaseOrder[]
+
+  @@index([businessId])
+  @@index([email])
+}
+
+model PurchaseOrder {
+  id         String              @id @default(cuid())
+  storeId    String?
+  store      Store?              @relation(fields: [storeId], references: [id])
+  orderNo    String              @unique
+  supplierId String
+  supplier   Supplier            @relation(fields: [supplierId], references: [id])
+  status     PurchaseOrderStatus @default(PENDING)
+  note       String?
+  totalCost  Float               @default(0)
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  receivedAt DateTime?
+  items      PurchaseOrderItem[]
+
+  @@index([storeId])
+}
+
+model PurchaseOrderItem {
+  id              String        @id @default(cuid())
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  quantity        Int
+  cost            Float
+  receivedQty     Int           @default(0)
+}
+
+enum PurchaseOrderStatus {
+  PENDING
+  PARTIAL
+  RECEIVED
+  CANCELLED
+}
+
+model InventoryMovement {
+  id        String        @id @default(cuid())
+  storeId   String?
+  store     Store?        @relation(fields: [storeId], references: [id])
+  productId String
+  product   Product       @relation(fields: [productId], references: [id])
+  type      MovementType
+  quantity  Int
+  reason    String?
+  reference String?
+  createdAt DateTime      @default(now())
+
+  @@index([storeId, createdAt])
+  @@index([productId])
+}
+
+enum MovementType {
+  IN
+  OUT
+  ADJUSTMENT
+  RETURN
+  TRANSFER_OUT
+  TRANSFER_IN
+}
+
+// ─── Sales ───────────────────────────────────────────────────────
+
+model Customer {
+  id                 String    @id @default(cuid())
+  businessId         String?
+  business           Business? @relation(fields: [businessId], references: [id])
+  name               String
+  email              String?
+  phone              String?
+  whatsapp           String?
+  address            String?
+  creditBalance      Float     @default(0)
+  outstandingBalance Float     @default(0)
+  version            Int       @default(1)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  sales              Sale[]
+
+  @@index([businessId])
+  @@index([email])
+}
+
+model Sale {
+  id         String        @id @default(cuid())
+  storeId    String?
+  store      Store?        @relation(fields: [storeId], references: [id])
+  invoiceNo  String        @unique
+  customerId String?
+  customer   Customer?     @relation(fields: [customerId], references: [id])
+  userId     String?
+  user       User?         @relation(fields: [userId], references: [id])
+  subtotal   Float
+  tax        Float         @default(0)
+  discount   Float         @default(0)
+  total      Float
+  method     PaymentMethod @default(CASH)
+  status     SaleStatus    @default(COMPLETED)
+  note       String?
+  version    Int           @default(1)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  items      SaleItem[]
+
+  @@index([storeId, createdAt])
+}
+
+model SaleItem {
+  id        String  @id @default(cuid())
+  saleId    String
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Float
+  total     Float
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  MOBILE
+}
+
+enum SaleStatus {
+  COMPLETED
+  PENDING
+  REFUNDED
+}
+
+// ─── Configuration ───────────────────────────────────────────────
+
+model Setting {
+  id      String  @id @default(cuid())
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id])
+  /// Global device/app settings remain keyed uniquely (cloud URL, theme, etc.).
+  key     String  @unique
+  value   String
+
+  @@index([storeId])
+}

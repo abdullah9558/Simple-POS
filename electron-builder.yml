@@ -1,0 +1,50 @@
+appId: com.simple.pos-system
+productName: SimplePOS
+copyright: Copyright © 2026 SimplePOS
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+# Packaged app gets a cleaned package.json copy — never write back to the project root.
+removePackageScripts: true
+removePackageKeywords: true
+extraResources:
+  - from: prisma/migrations
+    to: prisma/migrations
+  - from: prisma/schema.prisma
+    to: prisma/schema.prisma
+  - from: build/icon.png
+    to: icon.png
+  - from: build/icon.ico
+    to: icon.ico
+asar: true
+asarUnpack:
+  - '**/*.{node,dll}'
+  - '**/node_modules/libsql/**'
+  - '**/node_modules/@libsql/**'
+npmRebuild: false
+nodeGypRebuild: false
+forceCodeSigning: false
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  artifactName: ${productName}-Setup-${version}.${ext}
+  verifyUpdateCodeSignature: false
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: SimplePOS
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  deleteAppDataOnUninstall: false
+portable:
+  artifactName: ${productName}-Portable-${version}.${ext}
+publish: null

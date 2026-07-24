@@ -1,0 +1,38 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+dist-electron
+release
+*.local
+
+# Code signing secrets
+certs/*.pfx
+certs/*.p12
+certs/.env.signing
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+/src/generated/prisma
+# Packaged Electron builds (too large for GitHub)
+demo-release/
+release/
+dist-electron/
+*.exe
+*.asar
+# Local secrets / DB
+.env
+.env.*
+!.env.example
+*.db
