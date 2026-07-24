@@ -5,18 +5,8 @@ on:
   push:
     branches:
       - master
-    paths:
-      - 'electron-builder.yml'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'electron/**'
-      - 'src/**'
-      - 'build/**'
-      - 'scripts/**'
-      - '.github/workflows/build-mac.yml'
-      - 'prisma/**'
-  tags:
-    - 'v*'
+    tags:
+      - 'v*'
 
 jobs:
   mac:
