@@ -22,7 +22,7 @@ Sign in on the login screen when the desktop app starts.
 
 ## Run locally
 
-```powershell
+```bash
 npm install
 npm run dev
 ```
@@ -31,7 +31,7 @@ Header controls: **store switcher** and **Sync Now** status.
 
 ## Cloud API (optional)
 
-```powershell
+```bash
 cd cloud-api
 npm install
 npm run dev
@@ -43,7 +43,40 @@ Postgres (for production cloud hosts): see `cloud-api/docker-compose.yml` and `c
 
 ## Build
 
-```powershell
+```bash
 npm run build
 npm run build:all
 ```
+
+### Windows installer
+
+Build on Windows:
+
+```bash
+npm run dist
+# or portable:
+npm run dist:portable
+```
+
+Output: `release/SimplePOS-Setup-*.exe`
+
+### Mac installer
+
+Build on **macOS only** (Apple Silicon or Intel). Native SQLite bindings and DMG packaging require a Mac host.
+
+```bash
+npm install
+npm run dist:mac
+```
+
+Output in `release/`:
+
+- `SimplePOS-<version>-arm64.dmg` — Apple Silicon
+- `SimplePOS-<version>-x64.dmg` — Intel Mac
+- matching `.zip` archives for each arch
+
+Install: open the DMG → drag **SimplePOS** into **Applications**.
+
+Unsigned builds: right-click the app → **Open** the first time (Gatekeeper). For public release, sign and notarize with an Apple Developer ID (`CSC_LINK` / notarization env vars).
+
+CI: GitHub Actions workflow **Build Mac installer** (`.github/workflows/build-mac.yml`) produces the same artifacts on `macos-latest`.

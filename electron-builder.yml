@@ -22,7 +22,7 @@ extraResources:
     to: icon.ico
 asar: true
 asarUnpack:
-  - '**/*.{node,dll}'
+  - '**/*.{node,dll,dylib}'
   - '**/node_modules/libsql/**'
   - '**/node_modules/@libsql/**'
 npmRebuild: false
@@ -47,4 +47,35 @@ nsis:
   deleteAppDataOnUninstall: false
 portable:
   artifactName: ${productName}-Portable-${version}.${ext}
+mac:
+  category: public.app-category.business
+  icon: build/icon.png
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    NSHighResolutionCapable: true
+    NSSupportsAutomaticGraphicsSwitching: true
+  darkModeSupport: true
+dmg:
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  title: ${productName} ${version}
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
 publish: null

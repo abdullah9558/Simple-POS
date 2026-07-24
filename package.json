@@ -16,6 +16,8 @@
     "pack": "npm run build && electron-builder --config electron-builder.yml --dir",
     "dist": "npm run build && electron-builder --config electron-builder.yml --win",
     "dist:portable": "npm run build && electron-builder --config electron-builder.yml --win portable",
+    "dist:mac": "node scripts/ensure-mac-build-host.mjs && npm run build && electron-builder --config electron-builder.yml --mac",
+    "dist:mac:dir": "node scripts/ensure-mac-build-host.mjs && npm run build && electron-builder --config electron-builder.yml --mac --dir",
     "build:cloud-api": "npm run build --prefix cloud-api",
     "build:all": "npm run build && npm run build:cloud-api"
   },

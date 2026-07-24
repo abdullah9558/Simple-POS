@@ -29,12 +29,32 @@ const printOptionsSchema = z.object({
   mode: z.enum(['html', 'escpos']).optional(),
 }).optional()
 
+function noPrinterMessage(): string {
+  if (process.platform === 'darwin') {
+    return 'No printer is available. Add a printer in System Settings → Printers & Scanners, or use Save as PDF.'
+  }
+  if (process.platform === 'win32') {
+    return 'No printer is installed. Add a printer or enable Microsoft Print to PDF in Windows Settings.'
+  }
+  return 'No printer is available. Add a system printer and try again.'
+}
+
+function invalidPrinterSettingsMessage(): string {
+  if (process.platform === 'darwin') {
+    return 'macOS rejected the printer settings. Check that a default printer is online in System Settings.'
+  }
+  if (process.platform === 'win32') {
+    return 'Windows rejected the printer settings. Check that a default printer is installed and online.'
+  }
+  return 'The printer rejected the print settings. Check that a default printer is installed and online.'
+}
+
 function printHtml(html: string, options: { silent?: boolean; deviceName?: string; copies?: number } = {}): Promise<boolean> {
   return new Promise((resolve, reject) => {
     const silent = options.silent === true
     const printWindow = new BrowserWindow({
-      // Windows cannot reliably display its native print dialog from a hidden
-      // webContents; it commonly returns "Invalid printer settings".
+      // Windows (and some macOS setups) cannot reliably show the native print
+      // dialog from a hidden webContents; showing the window avoids that failure.
       show: !silent,
       width: 520,
       height: 760,
@@ -61,11 +81,7 @@ function printHtml(html: string, options: { silent?: boolean; deviceName?: strin
       const printers = await printWindow.webContents.getPrintersAsync().catch(() => [])
       if (printers.length === 0) {
         cleanup()
-        reject(
-          new Error(
-            'No Windows printer is installed. Add a printer or enable Microsoft Print to PDF in Windows Settings.',
-          ),
-        )
+        reject(new Error(noPrinterMessage()))
         return
       }
 
@@ -75,8 +91,7 @@ function printHtml(html: string, options: { silent?: boolean; deviceName?: strin
         return
       }
 
-      // Give the visible native window time to become active before Chromium
-      // asks Windows to create the print settings/dialog.
+      // Let the native window become active before Chromium opens the print dialog.
       await new Promise((done) => setTimeout(done, silent ? 50 : 350))
 
       const printOptions: Electron.WebContentsPrintOptions = {
@@ -93,7 +108,7 @@ function printHtml(html: string, options: { silent?: boolean; deviceName?: strin
           if (!success && failureReason) {
             const detail =
               failureReason === 'Invalid printer settings'
-                ? 'Windows rejected the printer settings. Check that a default printer is installed and online.'
+                ? invalidPrinterSettingsMessage()
                 : failureReason
             reject(new Error(detail))
             return

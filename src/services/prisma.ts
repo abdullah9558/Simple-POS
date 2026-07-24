@@ -38,12 +38,15 @@ function resolveDbPath(): string {
   return path.join(resolveProjectRoot(), 'prisma', 'dev.db')
 }
 
-/** libSQL expects a file: URL; Windows absolute paths need file:///C:/... */
+/** libSQL expects a file: URL; Windows needs file:///C:/..., POSIX needs file:///Users/... */
 function toLibsqlFileUrl(dbPath: string): string {
   const absolute = path.resolve(dbPath)
   const normalized = absolute.replace(/\\/g, '/')
   if (/^[A-Za-z]:\//.test(normalized)) {
     return `file:///${normalized}`
+  }
+  if (normalized.startsWith('/')) {
+    return `file://${normalized}`
   }
   return `file:${normalized}`
 }

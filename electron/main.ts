@@ -27,12 +27,20 @@ let splashWindow: BrowserWindow | null = null
 let isQuitting = false
 
 function resolveIcon(): string | undefined {
-  const candidates = [
-    path.join(BUILD_RESOURCES, 'icon.ico'),
-    path.join(BUILD_RESOURCES, 'icon.png'),
-    path.join(process.resourcesPath, 'icon.ico'),
-    path.join(process.resourcesPath, 'icon.png'),
-  ]
+  const candidates =
+    process.platform === 'darwin'
+      ? [
+          path.join(BUILD_RESOURCES, 'icon.icns'),
+          path.join(BUILD_RESOURCES, 'icon.png'),
+          path.join(process.resourcesPath, 'icon.icns'),
+          path.join(process.resourcesPath, 'icon.png'),
+        ]
+      : [
+          path.join(BUILD_RESOURCES, 'icon.ico'),
+          path.join(BUILD_RESOURCES, 'icon.png'),
+          path.join(process.resourcesPath, 'icon.ico'),
+          path.join(process.resourcesPath, 'icon.png'),
+        ]
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) return candidate
   }
@@ -81,7 +89,7 @@ function createSplashWindow(): void {
   const splashHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8" />
 <style>
-html,body{margin:0;height:100%;overflow:hidden;font-family:Segoe UI,system-ui,sans-serif}
+html,body{margin:0;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif}
 body{display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#0f172a 0%,#1e293b 55%,#0ea5e9 160%);color:#f8fafc}
 .mark{width:72px;height:72px;border-radius:16px;background:#fff;display:grid;place-items:center;box-shadow:0 12px 40px rgba(14,165,233,.35);margin-bottom:18px;overflow:hidden}
 .mark img{width:100%;height:100%;object-fit:contain}
@@ -114,6 +122,13 @@ p{margin:8px 0 0;opacity:.72;font-size:13px}
 
 function createWindow(): void {
   const icon = resolveIcon()
+  if (process.platform === 'darwin' && icon && app.dock) {
+    try {
+      app.dock.setIcon(icon)
+    } catch {
+      // Dock icon is optional; bundle icon still applies when packaged.
+    }
+  }
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,

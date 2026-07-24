@@ -2,8 +2,9 @@
 
 | File | Purpose |
 |------|---------|
-| `icon.png` | Application / installer icon (512×512+). electron-builder converts for Windows. |
+| `icon.png` | Application / installer icon (512×512+). electron-builder converts for Windows and macOS. |
 | `icon.ico` | Optional multi-size Windows icon. If missing, PNG is used. |
+| `entitlements.mac.plist` | Hardened Runtime entitlements for Mac packaging / notarization. |
 | `splash.png` | Optional splash artwork reference (runtime splash is HTML in `electron/main.ts`). |
 
 Generate `icon.ico` from PNG if needed:
@@ -12,3 +13,5 @@ Generate `icon.ico` from PNG if needed:
 # Example with ImageMagick
 magick convert build/icon.png -define icon:auto-resize=256,128,64,48,32,16 build/icon.ico
 ```
+
+On macOS, electron-builder converts `icon.png` to `.icns` automatically during `npm run dist:mac`.
